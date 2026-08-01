@@ -202,7 +202,7 @@ curl -H "Authorization: Bearer YOUR_TOKEN" https://httpbin.org/bearer
 ```bash
 curl -X POST https://httpbin.org/post \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"123456"}'
+  -d '{"username":"admin","password":"<example-password>"}'
 ```
 
 说明：
@@ -299,7 +299,7 @@ curl -G https://httpbin.org/get \
 ```bash
 curl -X POST https://httpbin.org/post \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=admin&password=123456"
+  -d "username=admin&password=<example-password>"
 ```
 
 ### 5.4 发送 JSON
@@ -523,7 +523,7 @@ PowerShell 下建议优先用单引号包裹 JSON：
 ```powershell
 curl.exe -X POST https://httpbin.org/post `
   -H "Content-Type: application/json" `
-  -d '{"username":"admin","password":"123456"}'
+  -d '{"username":"admin","password":"<example-password>"}'
 ```
 
 ---
@@ -762,7 +762,7 @@ wget --user=user --password=passwd https://httpbin.org/basic-auth/user/passwd -O
 ### 16.3 发送 POST 表单
 
 ```bash
-wget --post-data="username=admin&password=123456" https://httpbin.org/post -O post-result.json
+wget --post-data="username=admin&password=<example-password>" https://httpbin.org/post -O post-result.json
 ```
 
 ### 16.4 保存响应到标准输出

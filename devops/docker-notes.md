@@ -413,7 +413,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgresql://user:pass@db:5432/mydb
+      DATABASE_URL: postgresql://user:<db-password>@db:5432/mydb
       REDIS_URL: redis://redis:6379
     depends_on:
       - db
@@ -426,7 +426,7 @@ services:
     image: postgres:15
     environment:
       POSTGRES_USER: user
-      POSTGRES_PASSWORD: pass
+      POSTGRES_PASSWORD: <db-password>
       POSTGRES_DB: mydb
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -481,7 +481,7 @@ docker run -d \
 docker run -d \
   -p 3306:3306 \
   --name mysql \
-  -e MYSQL_ROOT_PASSWORD=123456 \
+  -e MYSQL_ROOT_PASSWORD='<strong-password>' \
   -e MYSQL_DATABASE=mydb \
   -v mysql-data:/var/lib/mysql \
   mysql:8.0

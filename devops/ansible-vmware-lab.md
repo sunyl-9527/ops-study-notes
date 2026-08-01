@@ -1,243 +1,167 @@
 # VMware + Arch Linux 搭建 Ansible 实践环境
 
-本文档用于把 5 台 VMware 虚拟机搭建为一套 Ansible 学习环境：
+本文搭建一套隔离的 Ansible 学习环境：1 台控制节点管理 4 台被控节点。重点是理解 inventory、SSH 认证、ad-hoc 命令、playbook 和故障排查。
 
-- 1 台控制节点：`ansible-ctl`
-- 4 台被控节点：`ansible-node1`、`ansible-node2`、`ansible-node3`、`ansible-node4`
-
-## 规划
-
-虚拟机统一配置：
-
-- CPU：`2C`
-- 内存：`4GB`
-- 磁盘：`20GB`
-- 系统：`Arch Linux`
-- 网络：VMware `VMnet8 NAT`
-- ISO：`C:\Users\DELL\Downloads\archlinux-x86_64.iso`
-
-IP 规划：
+## 1. 实验拓扑
 
 ```text
-ansible-ctl    192.168.88.10
-ansible-node1  192.168.88.21
-ansible-node2  192.168.88.22
-ansible-node3  192.168.88.23
-ansible-node4  192.168.88.24
-gateway        192.168.88.2
-host VMnet8    192.168.88.1
+Windows 宿主机
+└─ VMware VMnet8 NAT: 192.168.88.0/24
+   ├─ ansible-ctl    192.168.88.10
+   ├─ ansible-node1  192.168.88.21
+   ├─ ansible-node2  192.168.88.22
+   ├─ ansible-node3  192.168.88.23
+   └─ ansible-node4  192.168.88.24
 ```
 
-账号密码：
+建议每台虚拟机配置：
 
-```text
-root/root
-ansible/ansible
-```
+| 项目 | 建议值 |
+|---|---|
+| CPU | 2 vCPU |
+| 内存 | 2-4 GB |
+| 磁盘 | 20 GB |
+| 系统 | Arch Linux |
+| 网络 | VMware VMnet8 NAT |
 
-## 1. 准备 VMware NAT 网络
+这是实验网段。若本机已有相同网段，应统一替换本文地址，避免路由冲突。
 
-在 VMware Virtual Network Editor 中确认 `VMnet8` 存在，并配置为：
+## 2. 前置条件
 
-- 类型：`NAT`
-- 子网：`192.168.88.0`
-- 掩码：`255.255.255.0`
-- 网关：`192.168.88.2`
-- DHCP：开启
+- VMware Workstation 和 Arch Linux ISO。
+- `VMnet8` 已配置为 NAT，宿主机可访问虚拟机。
+- 每台虚拟机完成基础系统安装并创建普通用户 `ansible`。
+- 节点时间同步正常，主机名和 IP 唯一。
 
-管理员 PowerShell 检查服务：
+不要在公开笔记中记录实验机真实密码。安装阶段可使用临时密码，完成 SSH 密钥配置后立即更换或禁用密码登录。
+
+## 3. 检查 VMware NAT
+
+在管理员 PowerShell 中检查 VMware 服务：
 
 ```powershell
-Get-Service -Name "VMnetDHCP","VMware NAT Service"
+Get-Service -Name "VMnetDHCP", "VMware NAT Service"
 ```
 
-正常状态：
-
-```text
-Running  VMnetDHCP
-Running  VMware NAT Service
-```
-
-如果服务没有启动，管理员 PowerShell 执行：
+需要时启动服务：
 
 ```powershell
-Set-Service -Name "VMnetDHCP" -StartupType Automatic
-Set-Service -Name "VMware NAT Service" -StartupType Automatic
 Start-Service -Name "VMnetDHCP"
 Start-Service -Name "VMware NAT Service"
 ```
 
-## 2. 创建 4 台被控节点虚拟机
+确认 `VMnet8` 的子网、掩码、网关和 DHCP 范围没有与静态地址冲突。建议把 `192.168.88.10` 和 `192.168.88.21-24` 排除在 DHCP 地址池之外。
 
-在 Windows PowerShell 中执行：
+## 4. 初始化所有节点
 
-```powershell
-powershell -ExecutionPolicy Bypass -File "C:\Users\DELL\Desktop\work_note\scripts\create-ansible-lab.ps1"
+设置主机名，每台机器只执行与自身对应的一条：
+
+```bash
+sudo hostnamectl set-hostname ansible-ctl
+sudo hostnamectl set-hostname ansible-node1
+sudo hostnamectl set-hostname ansible-node2
+sudo hostnamectl set-hostname ansible-node3
+sudo hostnamectl set-hostname ansible-node4
 ```
 
-虚拟机会创建在：
+安装基础软件并启用 SSH：
+
+```bash
+sudo pacman -Syu --needed python sudo openssh
+sudo systemctl enable --now sshd
+```
+
+被控节点必须有 Python；控制节点还需要安装 Ansible：
+
+```bash
+sudo pacman -S --needed ansible
+ansible --version
+```
+
+将主机名写入所有节点的 `/etc/hosts`：
 
 ```text
-D:\Virtual Machines\ansible
+192.168.88.10 ansible-ctl
+192.168.88.21 ansible-node1
+192.168.88.22 ansible-node2
+192.168.88.23 ansible-node3
+192.168.88.24 ansible-node4
 ```
 
-生成内容：
-
-```text
-D:\Virtual Machines\ansible\ansible-node1
-D:\Virtual Machines\ansible\ansible-node2
-D:\Virtual Machines\ansible\ansible-node3
-D:\Virtual Machines\ansible\ansible-node4
-```
-
-控制节点 `ansible-ctl` 可以用 VMware 图形界面新建，配置保持 `2C / 4GB / 20GB`，网络选择 `NAT`，ISO 选择同一个 Arch Linux 镜像。
-
-## 3. 开启宿主机临时 HTTP 服务
-
-为了避免在无图形化 TTY 里大量复制粘贴，在宿主机开启临时 HTTP 服务，让虚拟机从 `192.168.88.1:8000` 下载安装脚本。
-
-在 Windows PowerShell 中执行：
-
-```powershell
-cd "C:\Users\DELL\Desktop\work_note"
-python -m http.server 8000 --bind 192.168.88.1
-```
-
-保持这个窗口不要关闭，直到 5 台虚拟机都安装完成。
-
-## 4. 安装 4 台被控节点
-
-每台被控节点从 Arch ISO 启动后，先确认网络：
+静态 IP 的配置方式取决于使用 NetworkManager、systemd-networkd 还是其他网络管理工具。修改前先执行以下命令确认当前方案：
 
 ```bash
-ping -c 3 archlinux.org
+systemctl is-active NetworkManager
+systemctl is-active systemd-networkd
+ip -brief address
+ip route
 ```
 
-安装 `ansible-node1`：
+## 5. 配置 SSH 密钥认证
+
+在控制节点以 `ansible` 用户生成密钥：
 
 ```bash
-curl -fLO http://192.168.88.1:8000/i.sh
-chmod +x i.sh
-./i.sh ansible-node1
+ssh-keygen -t ed25519 -a 100
 ```
 
-安装 `ansible-node2`：
+复制公钥到各被控节点：
 
 ```bash
-curl -fLO http://192.168.88.1:8000/i.sh
-chmod +x i.sh
-./i.sh ansible-node2
+ssh-copy-id ansible@192.168.88.21
+ssh-copy-id ansible@192.168.88.22
+ssh-copy-id ansible@192.168.88.23
+ssh-copy-id ansible@192.168.88.24
 ```
 
-安装 `ansible-node3`：
+逐台验证：
 
 ```bash
-curl -fLO http://192.168.88.1:8000/i.sh
-chmod +x i.sh
-./i.sh ansible-node3
+ssh ansible@192.168.88.21 hostname
+ssh ansible@192.168.88.22 hostname
+ssh ansible@192.168.88.23 hostname
+ssh ansible@192.168.88.24 hostname
 ```
 
-安装 `ansible-node4`：
+不要在 inventory 中保存明文 `ansible_password`。必须使用密码时，用 Ansible Vault 加密变量。
+
+## 6. 配置 sudo
+
+在每个被控节点使用 `visudo` 创建 `/etc/sudoers.d/ansible`：
+
+```sudoers
+ansible ALL=(ALL:ALL) ALL
+```
+
+验证语法和权限：
 
 ```bash
-curl -fLO http://192.168.88.1:8000/i.sh
-chmod +x i.sh
-./i.sh ansible-node4
+sudo chmod 440 /etc/sudoers.d/ansible
+sudo visudo -cf /etc/sudoers.d/ansible
 ```
 
-脚本提示时输入大写：
+实验环境也不建议默认配置无限制免密 sudo。需要自动提权时使用 `--ask-become-pass`，或将提权密码放进 Vault。
 
-```text
-YES
-```
+## 7. 创建 Ansible 项目
 
-安装完成后关机，断开 ISO，再从硬盘启动。
-
-## 5. 初始化 4 台被控节点
-
-被控节点系统安装完成并启动后，可以从宿主机远程初始化。该步骤会：
-
-- 安装 `python`、`sudo`、`openssh` 等基础包
-- 启用 `sshd`
-- 配置 `ansible` 用户免密 sudo
-- 写入 `/etc/hosts`
-- 固定静态 IP 为 `192.168.88.21-24`
-
-当前已使用过的初始化命令如下，可作为重做参考：
-
-```powershell
-ssh -tt -o StrictHostKeyChecking=no ansible@192.168.88.128 "curl -fL http://192.168.88.1:8000/scripts/bootstrap-managed-node.sh -o /tmp/bootstrap-managed-node.sh && echo ansible | sudo -S bash /tmp/bootstrap-managed-node.sh ansible-node1 192.168.88.21 && sudo reboot"
-ssh -tt -o StrictHostKeyChecking=no ansible@192.168.88.129 "curl -fL http://192.168.88.1:8000/scripts/bootstrap-managed-node.sh -o /tmp/bootstrap-managed-node.sh && echo ansible | sudo -S bash /tmp/bootstrap-managed-node.sh ansible-node2 192.168.88.22 && sudo reboot"
-ssh -tt -o StrictHostKeyChecking=no ansible@192.168.88.130 "curl -fL http://192.168.88.1:8000/scripts/bootstrap-managed-node.sh -o /tmp/bootstrap-managed-node.sh && echo ansible | sudo -S bash /tmp/bootstrap-managed-node.sh ansible-node3 192.168.88.23 && sudo reboot"
-ssh -tt -o StrictHostKeyChecking=no ansible@192.168.88.131 "curl -fL http://192.168.88.1:8000/scripts/bootstrap-managed-node.sh -o /tmp/bootstrap-managed-node.sh && echo ansible | sudo -S bash /tmp/bootstrap-managed-node.sh ansible-node4 192.168.88.24 && sudo reboot"
-```
-
-初始化后验证 SSH：
-
-```powershell
-Test-NetConnection 192.168.88.21 -Port 22
-Test-NetConnection 192.168.88.22 -Port 22
-Test-NetConnection 192.168.88.23 -Port 22
-Test-NetConnection 192.168.88.24 -Port 22
-```
-
-## 6. 安装控制节点
-
-控制节点 `ansible-ctl` 从 Arch ISO 启动后，确认网络：
+在控制节点执行：
 
 ```bash
-ping -c 3 archlinux.org
-```
-
-执行：
-
-```bash
-curl -fLO http://192.168.88.1:8000/ctl.sh
-chmod +x ctl.sh
-./ctl.sh
-```
-
-脚本提示时输入大写：
-
-```text
-YES
-```
-
-控制节点脚本会自动安装：
-
-- `ansible`
-- `sshpass`
-- `python`
-- `openssh`
-- `sudo`
-- `git`
-- `vim`
-- `NetworkManager`
-
-安装完成后关机，断开 ISO，再从硬盘启动。
-
-## 7. 在控制节点验证 Ansible
-
-登录控制节点：
-
-```text
-user: ansible
-password: ansible
-```
-
-进入实验目录：
-
-```bash
+mkdir -p ~/ansible-lab
 cd ~/ansible-lab
 ```
 
-查看清单：
+创建 `ansible.cfg`：
 
-```bash
-cat inventory.ini
+```ini
+[defaults]
+inventory = ./inventory.ini
+interpreter_python = auto_silent
+host_key_checking = True
+retry_files_enabled = False
 ```
 
-内容应为：
+创建 `inventory.ini`：
 
 ```ini
 [managed]
@@ -248,41 +172,142 @@ ansible-node4 ansible_host=192.168.88.24
 
 [managed:vars]
 ansible_user=ansible
-ansible_password=ansible
 ```
 
-执行连通性测试：
+首次连接前写入 SSH 主机指纹：
+
+```bash
+ssh-keyscan -H 192.168.88.21 192.168.88.22 192.168.88.23 192.168.88.24 >> ~/.ssh/known_hosts
+```
+
+实验中应核对显示的指纹。不要为了省事长期关闭 `host_key_checking`。
+
+## 8. 验证 Ansible
+
+检查 inventory：
+
+```bash
+ansible-inventory --graph
+ansible managed --list-hosts
+```
+
+测试 SSH 和 Python：
 
 ```bash
 ansible managed -m ping
 ```
 
-执行测试 playbook：
+查看基础信息：
 
 ```bash
+ansible managed -m command -a 'hostnamectl --static'
+ansible managed -m setup -a 'filter=ansible_distribution*'
+```
+
+需要 sudo 时：
+
+```bash
+ansible managed -b --ask-become-pass -m command -a 'id'
+```
+
+## 9. 第一个 playbook
+
+创建 `ping.yml`：
+
+```yaml
+---
+- name: Verify managed nodes
+  hosts: managed
+  gather_facts: true
+
+  tasks:
+    - name: Test Ansible connection
+      ansible.builtin.ping:
+
+    - name: Show hostname
+      ansible.builtin.debug:
+        var: ansible_hostname
+```
+
+先做语法检查，再执行：
+
+```bash
+ansible-playbook --syntax-check ping.yml
 ansible-playbook ping.yml
 ```
-```
-echo 'root:V^BAF*sAtTajZjDz' | sudo chpasswd && echo 'ansible:V^BAF*sAtTajZjDz' | sudo chpasswd
-```
 
-正常时四台节点都会返回成功，并显示各自主机名和 IP。
+## 10. 使用 Ansible Vault
 
-## 8. 保留文件说明
+创建加密变量文件：
 
-必要文件：
-
-```text
-scripts/create-ansible-lab.ps1
-scripts/arch-install-managed-node.sh
-scripts/bootstrap-managed-node.sh
-scripts/arch-install-control-node.sh
-i.sh
-ctl.sh
-ansible/ansible.cfg
-ansible/inventory.ini
-ansible/ping.yml
-docs/ansible-vmware-lab.md
+```bash
+mkdir -p group_vars/managed
+ansible-vault create group_vars/managed/vault.yml
 ```
 
-当前文档已经合并了原来的控制节点和被控节点安装说明。
+文件中可保存：
+
+```yaml
+ansible_become_password: "<temporary-lab-password>"
+```
+
+执行时输入 Vault 密码：
+
+```bash
+ansible managed -b --ask-vault-pass -m command -a 'id'
+```
+
+Vault 文件可以提交，Vault 密码不能提交。生产环境优先使用专用密钥管理系统。
+
+## 11. 常见问题
+
+### SSH 不通
+
+在宿主机和控制节点分别检查：
+
+```powershell
+Test-NetConnection 192.168.88.21 -Port 22
+```
+
+```bash
+ip route
+ping -c 3 192.168.88.21
+ssh -vvv ansible@192.168.88.21
+```
+
+### Ansible 报 Python 不存在
+
+```bash
+ssh ansible@192.168.88.21 'command -v python && python --version'
+```
+
+Arch Linux 安装 `python` 包后再重试。
+
+### 主机指纹变化
+
+确认虚拟机确实被重装或替换后，再删除旧记录：
+
+```bash
+ssh-keygen -R 192.168.88.21
+ssh-keyscan -H 192.168.88.21 >> ~/.ssh/known_hosts
+```
+
+### sudo 失败
+
+```bash
+ssh -t ansible@192.168.88.21 'sudo -v && sudo id'
+```
+
+检查用户组、`/etc/sudoers.d/ansible` 权限和 `visudo` 校验结果。
+
+## 12. 实验完成检查表
+
+- [ ] 5 台虚拟机的主机名和 IP 与规划一致。
+- [ ] 控制节点能通过 SSH 密钥登录 4 台被控节点。
+- [ ] inventory 能正确列出 `managed` 组。
+- [ ] `ansible managed -m ping` 全部返回 `pong`。
+- [ ] `ping.yml` 通过语法检查并执行成功。
+- [ ] inventory 和 Git 中没有明文密码或私钥。
+- [ ] 已记录快照、重建步骤和故障排查结果。
+
+完成基础实验后，可继续练习 package、service、template、copy、user、firewalld/ufw 等模块，以及 role、handler、tag 和幂等性验证。

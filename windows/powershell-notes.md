@@ -141,7 +141,7 @@ PowerShell 提供了一些别名，方便从 `cmd` 或 Linux Shell 迁移。
 Get-Location
 
 # 切换目录
-Set-Location C:\Users\DELL\Desktop
+Set-Location C:\Projects
 
 # 返回上一级
 Set-Location ..

@@ -1,3 +1,19 @@
+# 私有笔记与本地配置
 Private/
+private/
 *.credentials
-*.env
+.env
+.env.*
+!.env.example
+
+# 密钥与证书
+*.key
+*.pem
+*.p12
+*.pfx
+
+# 编辑器和系统文件
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

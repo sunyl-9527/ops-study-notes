@@ -2,7 +2,7 @@
 
 > 适用对象：希望系统学习云计算运维、DevOps、容器化与中间件运维的学习者
 >
-> 文档定位：作为 `Notes/DevOps` 目录下的总览笔记，用来串联 Git、Nginx、Docker 和中间件学习路线
+> 文档定位：作为 `devops` 目录下的总览笔记，用来串联 Git、Nginx、Docker 和中间件学习路线
 
 ---
 

@@ -203,20 +203,20 @@ wsl --import Ubuntu-Restore D:\WSL\Ubuntu-Restore D:\backup\ubuntu-wsl.tar --ver
 Windows 磁盘会挂载到 `/mnt` 下。
 
 ```bash
-cd /mnt/c/Users/DELL/Desktop
+cd /mnt/c/Projects
 ls
 ```
 
 常见路径：
 
 ```text
-C:\Users\DELL\Desktop
+C:\Projects
 ```
 
 在 WSL 中对应：
 
 ```text
-/mnt/c/Users/DELL/Desktop
+/mnt/c/Projects
 ```
 
 ### 2. 在 Windows 中访问 WSL 文件
@@ -244,7 +244,7 @@ C:\Users\DELL\Desktop
 如果主要用 Windows 软件编辑和管理，可以放在 Windows 目录中，例如：
 
 ```text
-C:\Users\DELL\Desktop\work_note
+C:\Projects\ops-study-notes
 ```
 
 实践建议：
@@ -533,7 +533,7 @@ wslpath -w /home/user/project
 把 Windows 路径转换为 Linux 路径：
 
 ```bash
-wslpath 'C:\Users\DELL\Desktop'
+wslpath 'C:\Projects'
 ```
 
 ---

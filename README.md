@@ -30,7 +30,7 @@
 
 ```text
 PowerShell / WSL -> Linux 基础 -> Git -> Nginx -> Docker
-       -> 中间件 -> Ansible -> Python 自动化 -> Kubernetes / 云平台
+       -> 中间件 -> Ansible -> Python 自动化 -> Kubernetes / 云平台（规划中）
 ```
 
 每个阶段建议保留三类产出：可复现的实验步骤、故障现象与处理记录、验证结果。仅收藏命令而不做实验，很难形成可迁移的运维能力。

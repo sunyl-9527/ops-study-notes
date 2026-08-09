@@ -311,3 +311,126 @@ ssh -t ansible@192.168.88.21 'sudo -v && sudo id'
 - [ ] 已记录快照、重建步骤和故障排查结果。
 
 完成基础实验后，可继续练习 package、service、template、copy、user、firewalld/ufw 等模块，以及 role、handler、tag 和幂等性验证。
+
+---
+
+## 附录 A：批量创建虚拟机（PowerShell 脚本）
+
+如果有 4 台被控节点需要从零创建，可以用 PowerShell 脚本批量生成 VMX 虚拟机。脚本按需编写，以下为等效的交互式创建命令：
+
+```powershell
+$vmBase = "D:\Virtual Machines\ansible"
+$iso = "C:\Users\<your-user>\Downloads\archlinux-x86_64.iso"
+
+1..4 | ForEach-Object {
+    $name = "ansible-node$_"
+    $path = "$vmBase\$name"
+    New-Item -ItemType Directory -Force -Path $path
+
+    & "C:\Program Files (x86)\VMware\VMware Workstation\vmrun.exe" stop "$path\$name.vmx" 2>$null
+    & "C:\Program Files (x86)\VMware\VMware Workstation\VMware.exe" -T ws -X "$path" 2>$null
+
+    # 创建 VMX 配置文件
+    @"
+    .encoding = "UTF-8"
+    config.version = "8"
+    virtualHW.version = "18"
+    memsize = "4096"
+    numvcpus = "2"
+    ide1:0.fileName = "$iso"
+    ide1:0.deviceType = "cdrom-image"
+    scsi0:0.fileName = "$name.vmdk"
+    scsi0:0.present = "TRUE"
+    scsi0:0.redo = ""
+    ide0:0.present = "FALSE"
+    ethernet0.present = "TRUE"
+    ethernet0.connectionType = "nat"
+    ethernet0.virtualDev = "e1000"
+    ethernet0.addressType = "generated"
+    displayName = "$name"
+    guestOS = "archlinux-64"
+    "@ | Out-File -FilePath "$path\$name.vmx" -Encoding utf8
+}
+```
+
+控制节点 `ansible-ctl` 可用 VMware 图形界面新建，配置保持一致（2C / 4GB / 20GB），网络选择 NAT，ISO 选择同一个 Arch Linux 镜像。
+
+## 附录 B：通过 HTTP 脚本服务器引导安装
+
+在无图形化 TTY 中手动输入大量命令容易出错。可以在宿主机开一个临时 HTTP 服务，让虚拟机从宿主机下载安装脚本。
+
+### 宿主机启动 HTTP 服务
+
+```powershell
+cd "<path-to-scripts-directory>"
+python -m http.server 8000 --bind 192.168.88.1
+```
+
+保持窗口不要关闭，直到所有节点安装完成。确认防火墙允许 `8000/tcp` 入站。
+
+### 被控节点安装流程
+
+每台被控节点从 Arch ISO 启动后，先确认网络可达：
+
+```bash
+ping -c 3 archlinux.org
+```
+
+然后下载并执行安装脚本（脚本内容根据实际需求编写）：
+
+```bash
+curl -fLO http://192.168.88.1:8000/install-managed.sh
+chmod +x install-managed.sh
+./install-managed.sh <hostname>
+```
+
+安装完成后关机，断开 ISO，再从硬盘启动。
+
+### 被控节点初始化（从宿主机远程执行）
+
+被控节点首次启动后，可通过 SSH 远程执行初始化脚本，完成基础包安装、sshd 启用、sudo 配置和静态 IP 设置：
+
+```powershell
+ssh -tt -o StrictHostKeyChecking=no <user>@<temp-ip>  `
+    "curl -fL http://192.168.88.1:8000/bootstrap-managed.sh -o /tmp/bootstrap-managed.sh && " `
+  + "echo <sudo-password> | sudo -S bash /tmp/bootstrap-managed.sh <hostname> <static-ip> && sudo reboot"
+```
+
+初始化后验证 SSH 可达：
+
+```powershell
+Test-NetConnection 192.168.88.21 -Port 22
+Test-NetConnection 192.168.88.22 -Port 22
+Test-NetConnection 192.168.88.23 -Port 22
+Test-NetConnection 192.168.88.24 -Port 22
+```
+
+### 控制节点安装
+
+控制节点从 Arch ISO 启动后同样使用 HTTP 方式：
+
+```bash
+curl -fLO http://192.168.88.1:8000/install-control.sh
+chmod +x install-control.sh
+./install-control.sh
+```
+
+控制节点脚本应自动安装 `ansible`、`sshpass`、`python`、`openssh`、`sudo`、`git`、`vim`、`NetworkManager` 等基础工具。
+
+### 脚本文件清单
+
+实验结束后，保留以下脚本以便重建：
+
+```text
+scripts/
+├── create-ansible-lab.ps1        # 批量创建 VMX
+├── install-managed.sh            # 被控节点 Arch 安装
+├── bootstrap-managed-node.sh     # 被控节点初始化
+├── install-control.sh            # 控制节点 Arch 安装
+├── ansible/
+│   ├── ansible.cfg
+│   ├── inventory.ini
+│   └── ping.yml
+```
+
+> 不要将安装脚本中的密码、token 或本地路径提交到 Git。脚本中的敏感值应从环境变量读取或使用占位符。

@@ -2,7 +2,8 @@
 
 > 适用发行版：Ubuntu / Arch Linux  
 > 无特殊标注的命令两者通用。  
-> 阅读建议：先看目录定位主题，再按“查看信息 -> 修改配置 -> 验证结果”的顺序执行命令。
+> 阅读建议：先看目录定位主题，再按”查看信息 -> 修改配置 -> 验证结果”的顺序执行命令。  
+> 排查故障时，可配合 [云服务器运维常用命令](cloud-server-ops-commands.md) 按”现象 → 命令 → 验证”的方式快速定位。
 
 ---
 
@@ -1254,7 +1255,7 @@ unset MY_VAR
 echo 'export MY_VAR="hello"' >> ~/.bashrc   # bash
 echo 'export MY_VAR="hello"' >> ~/.zshrc    # zsh
 source ~/.bashrc               # 立即生效
--
+
 # 系统级（所有用户）
 sudo vim /etc/environment
 

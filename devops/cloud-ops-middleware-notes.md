@@ -430,6 +430,8 @@ redis-cli client list
 
 ## 十、监控与告警：Prometheus / Grafana
 
+> 本章只做概览。完整的部署实战、PromQL、告警规则与 Alertmanager 配置见 [monitoring-notes.md](./monitoring-notes.md)。
+
 ### 核心用途
 
 - 采集中间件指标。

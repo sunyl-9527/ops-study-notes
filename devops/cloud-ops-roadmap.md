@@ -2,7 +2,7 @@
 
 > 适用对象：希望系统学习云计算运维、DevOps、容器化与中间件运维的学习者
 >
-> 文档定位：作为 `devops` 目录下的总览笔记，用来串联 Git、Nginx、Docker 和中间件学习路线
+> 文档定位：作为 `devops` 目录下的总览笔记，用来串联 Git、Nginx、Docker 和中间件学习路线。若需要覆盖 Linux 基础到运维开发的全仓库路线，见根目录的 [ops-engineer-roadmap.md](../ops-engineer-roadmap.md)
 
 ---
 
@@ -52,9 +52,11 @@
 | Nginx 与服务入口 | [nginx-notes.md](./nginx-notes.md) |
 | Docker 与容器化 | [docker-notes.md](./docker-notes.md) |
 | 核心中间件运维 | [cloud-ops-middleware-notes.md](./cloud-ops-middleware-notes.md) |
+| 监控、日志与排障 | [monitoring-notes.md](./monitoring-notes.md) |
 | 自动化实验（Ansible） | [ansible-vmware-lab.md](./ansible-vmware-lab.md) |
 | 实验环境优化 | [archlinux-vm-optimization.md](./archlinux-vm-optimization.md) |
-| Kubernetes 与云原生 | 规划中，暂无独立笔记，见下方第七阶段说明 |
+| Kubernetes 与云原生 | [k8s-notes.md](./k8s-notes.md) |
+| CI/CD 持续交付 | [cicd-notes.md](./cicd-notes.md) |
 
 ---
 
@@ -229,6 +231,8 @@ Docker 在运维中的核心价值是：
 
 ## 八、第五阶段：监控、日志与排障
 
+> 本阶段配套笔记：[monitoring-notes.md](./monitoring-notes.md)，包含 Docker Compose 监控栈、PromQL、告警规则与 Alertmanager 实战。
+
 ### 学习重点
 
 - 主机指标：CPU、内存、磁盘、网络
@@ -263,6 +267,8 @@ Docker 在运维中的核心价值是：
 ---
 
 ## 九、第六阶段：自动化运维
+
+> 本阶段配套笔记：[ansible-vmware-lab.md](./ansible-vmware-lab.md)（配置管理自动化）与 [cicd-notes.md](./cicd-notes.md)（持续集成与自动部署流水线）。
 
 ### 学习重点
 
@@ -299,9 +305,9 @@ Docker 在运维中的核心价值是：
 
 ---
 
-## 十、第七阶段：Kubernetes 与云原生（规划中）
+## 十、第七阶段：Kubernetes 与云原生
 
-> 本阶段暂无配套的独立学习笔记（`k8s-notes.md` 尚未创建），以下内容作为学习目标和路线规划，供后续补充笔记时参考，不代表已有可查阅的详细文档。
+> 本阶段配套笔记：[k8s-notes.md](./k8s-notes.md)，覆盖核心对象、本地实验环境搭建、排障和 Helm 入门。
 
 ### 学习重点
 
@@ -459,7 +465,7 @@ Ingress -> Service -> Deployment / StatefulSet -> PVC
 - `架构图`：每个项目的组件关系
 - `复盘记录`：每次故障或实验问题的总结
 
-推荐目录结构（对应本仓库当前的 `devops/` 目录，`k8s-notes.md` 为规划中，尚未创建）：
+推荐目录结构（对应本仓库当前的 `devops/` 目录）：
 
 ```text
 devops/
@@ -469,9 +475,11 @@ devops/
   docker-notes.md
   cloud-ops-middleware-notes.md
   cloud-ops-roadmap.md
+  monitoring-notes.md
+  k8s-notes.md
+  cicd-notes.md
   ansible-vmware-lab.md
   archlinux-vm-optimization.md
-  k8s-notes.md        # 规划中
   projects/
     web-basic/
     docker-compose-lab/

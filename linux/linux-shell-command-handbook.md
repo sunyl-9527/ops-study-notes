@@ -1269,6 +1269,8 @@ echo 'export PATH="$PATH:/new/path"' >> ~/.bashrc
 
 ## 14. Shell 脚本基础
 
+> 本章只覆盖脚本入门语法。系统学习脚本编程（健壮性、参数解析、错误处理、实战脚本）见 [shell-scripting-notes.md](./shell-scripting-notes.md)。
+
 ### 14.1 变量与字符串
 
 ```bash

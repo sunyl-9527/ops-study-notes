@@ -597,4 +597,4 @@ docker system df
 3. 再写 `Dockerfile`
 4. 最后上 `Docker Compose`
 
-> 进一步学习方向：镜像优化、容器安全、CI/CD 集成、Kubernetes、镜像仓库管理。
+> 进一步学习方向：镜像优化、容器安全、CI/CD 集成（见 [cicd-notes.md](./cicd-notes.md)）、Kubernetes（见 [k8s-notes.md](./k8s-notes.md)）、镜像仓库管理。

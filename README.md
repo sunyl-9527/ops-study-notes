@@ -8,30 +8,34 @@
 
 | 目标 | 推荐入口 | 说明 |
 |---|---|---|
+| 从小白到运维开发工程师 | [完整学习路线](./ops-engineer-roadmap.md) | 九个阶段串联全仓库笔记，含各阶段过关标准 |
 | 系统学习云计算运维 | [云计算运维学习路线](./devops/cloud-ops-roadmap.md) | 从基础、服务部署到容器与自动化 |
 | 查询 Linux 命令 | [Linux Shell 命令手册](./linux/linux-shell-command-handbook.md) | 文件、网络、用户、进程、存储和脚本 |
 | 排查云服务器故障 | [云服务器运维常用命令](./linux/cloud-server-ops-commands.md) | 按系统、网络、磁盘、服务和日志定位问题 |
 | 学习容器与服务入口 | [Docker 学习文档](./devops/docker-notes.md) / [Nginx 指南](./devops/nginx-notes.md) | 部署、配置和排错实践 |
 | 搭建自动化实验环境 | [Ansible + VMware 实验](./devops/ansible-vmware-lab.md) | 1 个控制节点和 4 个被控节点 |
-| 使用 Python 做运维 | [Python 运维工程师学习路线](./python/学习路线.md) | 系统操作、网络、数据处理和工具开发 |
+| 使用 Python 做运维 | [Python 运维开发笔记](./python/python-ops-notes.md) | 子进程、SSH 自动化、API 调用和工具开发 |
 
 ## 分类导航
 
 | 分类 | 内容 |
 |---|---|
-| [DevOps](./devops/README.md) | Git、Nginx、Docker、中间件、Ansible 和学习路线 |
-| [Linux](./linux/README.md) | Shell 命令、云服务器排障、curl、Vim 和 Arch Linux |
+| [DevOps](./devops/README.md) | Git、Nginx、Docker、Kubernetes、CI/CD、监控、中间件、Ansible 和学习路线 |
+| [Linux](./linux/README.md) | Shell 命令、Shell 脚本、网络基础、云服务器排障、curl、Vim 和 Arch Linux |
 | [Windows](./windows/README.md) | PowerShell 与 WSL |
-| [Python](./python/README.md) | 面向运维场景的 Python 学习路线 |
+| [Python](./python/README.md) | Python 学习路线与运维开发实践 |
 | [远程运维](./remote/README.md) | FRP 部署和远程环境恢复 Runbook |
 | [提示词](./prompts/README.md) | DevOps、Linux 与 Python 学习提示词模板 |
 
 ## 建议学习顺序
 
 ```text
-PowerShell / WSL -> Linux 基础 -> Git -> Nginx -> Docker
-       -> 中间件 -> Ansible -> Python 自动化 -> Kubernetes / 云平台（规划中）
+PowerShell / WSL -> Linux 基础 -> 网络基础 -> Git -> Nginx -> Docker
+   -> 中间件 -> Shell 脚本 -> Ansible -> 监控告警 -> Kubernetes
+   -> CI/CD -> Python 运维开发 -> 云平台（规划中）
 ```
+
+完整的阶段划分和各阶段过关标准见[从运维小白到运维开发工程师学习路线](./ops-engineer-roadmap.md)。
 
 每个阶段建议保留三类产出：可复现的实验步骤、故障现象与处理记录、验证结果。仅收藏命令而不做实验，很难形成可迁移的运维能力。
 

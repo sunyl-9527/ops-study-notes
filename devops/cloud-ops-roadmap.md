@@ -52,6 +52,9 @@
 | Nginx 与服务入口 | [nginx-notes.md](./nginx-notes.md) |
 | Docker 与容器化 | [docker-notes.md](./docker-notes.md) |
 | 核心中间件运维 | [cloud-ops-middleware-notes.md](./cloud-ops-middleware-notes.md) |
+| 自动化实验（Ansible） | [ansible-vmware-lab.md](./ansible-vmware-lab.md) |
+| 实验环境优化 | [archlinux-vm-optimization.md](./archlinux-vm-optimization.md) |
+| Kubernetes 与云原生 | 规划中，暂无独立笔记，见下方第七阶段说明 |
 
 ---
 
@@ -296,7 +299,9 @@ Docker 在运维中的核心价值是：
 
 ---
 
-## 十、第七阶段：Kubernetes 与云原生
+## 十、第七阶段：Kubernetes 与云原生（规划中）
+
+> 本阶段暂无配套的独立学习笔记（`k8s-notes.md` 尚未创建），以下内容作为学习目标和路线规划，供后续补充笔记时参考，不代表已有可查阅的详细文档。
 
 ### 学习重点
 
@@ -454,15 +459,19 @@ Ingress -> Service -> Deployment / StatefulSet -> PVC
 - `架构图`：每个项目的组件关系
 - `复盘记录`：每次故障或实验问题的总结
 
-推荐目录结构：
+推荐目录结构（对应本仓库当前的 `devops/` 目录，`k8s-notes.md` 为规划中，尚未创建）：
 
 ```text
-DevOps/
+devops/
+  README.md
   git-notes.md
   nginx-notes.md
   docker-notes.md
   cloud-ops-middleware-notes.md
   cloud-ops-roadmap.md
+  ansible-vmware-lab.md
+  archlinux-vm-optimization.md
+  k8s-notes.md        # 规划中
   projects/
     web-basic/
     docker-compose-lab/

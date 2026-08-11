@@ -321,37 +321,42 @@ ssh -t ansible@192.168.88.21 'sudo -v && sudo id'
 ```powershell
 $vmBase = "D:\Virtual Machines\ansible"
 $iso = "C:\Users\<your-user>\Downloads\archlinux-x86_64.iso"
+$vmrun = "C:\Program Files (x86)\VMware\VMware Workstation\vmrun.exe"
 
 1..4 | ForEach-Object {
     $name = "ansible-node$_"
     $path = "$vmBase\$name"
-    New-Item -ItemType Directory -Force -Path $path
+    $vmx = "$path\$name.vmx"
+    New-Item -ItemType Directory -Force -Path $path | Out-Null
 
-    & "C:\Program Files (x86)\VMware\VMware Workstation\vmrun.exe" stop "$path\$name.vmx" 2>$null
-    & "C:\Program Files (x86)\VMware\VMware Workstation\VMware.exe" -T ws -X "$path" 2>$null
-
-    # 创建 VMX 配置文件
+    # 生成 VMX 配置文件（闭合分隔符 "@ 必须顶格写，否则 PowerShell 会报语法错误）
     @"
-    .encoding = "UTF-8"
-    config.version = "8"
-    virtualHW.version = "18"
-    memsize = "4096"
-    numvcpus = "2"
-    ide1:0.fileName = "$iso"
-    ide1:0.deviceType = "cdrom-image"
-    scsi0:0.fileName = "$name.vmdk"
-    scsi0:0.present = "TRUE"
-    scsi0:0.redo = ""
-    ide0:0.present = "FALSE"
-    ethernet0.present = "TRUE"
-    ethernet0.connectionType = "nat"
-    ethernet0.virtualDev = "e1000"
-    ethernet0.addressType = "generated"
-    displayName = "$name"
-    guestOS = "archlinux-64"
-    "@ | Out-File -FilePath "$path\$name.vmx" -Encoding utf8
+.encoding = "UTF-8"
+config.version = "8"
+virtualHW.version = "18"
+memsize = "4096"
+numvcpus = "2"
+ide1:0.fileName = "$iso"
+ide1:0.deviceType = "cdrom-image"
+scsi0:0.fileName = "$name.vmdk"
+scsi0:0.present = "TRUE"
+ide0:0.present = "FALSE"
+ethernet0.present = "TRUE"
+ethernet0.connectionType = "nat"
+ethernet0.virtualDev = "e1000"
+ethernet0.addressType = "generated"
+displayName = "$name"
+guestOS = "archlinux-64"
+"@ | Out-File -FilePath $vmx -Encoding utf8
+
+    # 创建对应的空磁盘，再启动虚拟机（首次启动会从挂载的 ISO 引导安装）
+    & $vmrun -T ws createvdisk $vmx -adapter lsilogic -size 20GB
+    & $vmrun -T ws start $vmx
 }
 ```
+
+- 之前版本在创建 VMX 之前调用 `vmrun stop`、以及用 `VMware.exe -X` 尝试"打开"虚拟机，这两步在 `.vmx` 文件还不存在时没有意义，也不会真正创建磁盘或启动安装，属于脚本错误，已删除并替换为 `vmrun createvdisk` + `vmrun start`。
+- PowerShell 的 here-string（`@"..."@`）要求闭合的 `"@`必须顶格写在行首，前面不能有空格或制表符，否则会直接报语法错误；原示例中闭合分隔符前有缩进，无法正常执行。
 
 控制节点 `ansible-ctl` 可用 VMware 图形界面新建，配置保持一致（2C / 4GB / 20GB），网络选择 NAT，ISO 选择同一个 Arch Linux 镜像。
 
@@ -391,10 +396,22 @@ chmod +x install-managed.sh
 被控节点首次启动后，可通过 SSH 远程执行初始化脚本，完成基础包安装、sshd 启用、sudo 配置和静态 IP 设置：
 
 ```powershell
-ssh -tt -o StrictHostKeyChecking=no <user>@<temp-ip>  `
+# 首次连接前，用 ssh-keyscan 采集并核对主机指纹，而不是直接关闭校验
+ssh-keyscan -H <temp-ip> | Out-File -Append -Encoding utf8 "$env:USERPROFILE\.ssh\known_hosts"
+
+# 提前设置好环境变量，避免密码出现在命令行参数和 shell 历史中
+$env:LAB_SUDO_PASSWORD = Read-Host -AsSecureString "输入临时 sudo 密码" |
+    ForEach-Object { [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToGlobalAllocUnicode($_)) }
+
+ssh -tt <user>@<temp-ip> `
     "curl -fL http://192.168.88.1:8000/bootstrap-managed.sh -o /tmp/bootstrap-managed.sh && " `
-  + "echo <sudo-password> | sudo -S bash /tmp/bootstrap-managed.sh <hostname> <static-ip> && sudo reboot"
+  + "sudo -S bash /tmp/bootstrap-managed.sh <hostname> <static-ip> <<< `"`$env:LAB_SUDO_PASSWORD`" && sudo reboot"
+
+Remove-Item Env:\LAB_SUDO_PASSWORD
 ```
+
+- 不要用 `StrictHostKeyChecking=no` 跳过主机指纹校验，即便是临时实验环境——这会让中间人替换目标主机而不被发现。改用 `ssh-keyscan` 显式采集指纹并写入 `known_hosts`，出现指纹变化时能及时察觉。
+- 不要把 `sudo` 密码明文拼进命令行（如 `echo <password> | sudo -S ...`），命令行参数会被记录进 shell 历史文件，同机其他用户也能通过 `ps` 在极短窗口内看到进程参数。改用环境变量或标准输入传递，用完立即清除。生产环境应直接用 SSH 密钥 + 禁用密码登录，彻底不需要传递密码。
 
 初始化后验证 SSH 可达：
 

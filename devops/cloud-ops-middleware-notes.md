@@ -176,26 +176,56 @@ systemctl status mysql
 tail -f /var/log/mysql/error.log
 ```
 
+### PostgreSQL 常用命令
+
+```bash
+# 以 postgres 系统用户连接（Linux 上通常通过 peer 认证免密登录本机）
+sudo -u postgres psql
+
+# 连接指定数据库
+psql -U app_user -d mydb -h 127.0.0.1
+
+# 备份与恢复
+pg_dump -U postgres mydb > backup.sql
+psql -U postgres mydb < backup.sql
+
+# 服务状态与日志
+systemctl status postgresql
+tail -f /var/log/postgresql/postgresql-*-main.log
+```
+
+`psql` 内常用元命令：
+
+```sql
+\l          -- 列出所有数据库
+\c mydb     -- 切换数据库
+\dt         -- 列出当前数据库的表
+\du         -- 列出角色/用户
+\d table    -- 查看表结构
+```
+
 ### 重点监控指标
 
 - 是否存活。
 - 当前连接数。
-- 最大连接数。
+- 最大连接数（MySQL 看 `max_connections`，PostgreSQL 同名参数，默认值通常更保守）。
 - QPS/TPS。
-- 慢查询数量。
-- 主从延迟。
+- 慢查询数量（PostgreSQL 需要显式开启 `log_min_duration_statement` 才会记录慢查询）。
+- 主从延迟（PostgreSQL 用流复制 `pg_stat_replication` 查看延迟）。
 - 磁盘空间。
-- 锁等待。
+- 锁等待（PostgreSQL 可查 `pg_locks` 和 `pg_stat_activity`）。
 
 ### 常见故障
 
 | 现象 | 常见原因 |
 |---|---|
-| 无法连接 | 服务未启动、端口未监听、防火墙、安全组、账号权限 |
-| 连接数满 | 应用连接未释放、连接池配置过大、max_connections 过小 |
-| 查询慢 | 缺少索引、SQL 写法问题、数据量大、锁等待 |
+| 无法连接 | 服务未启动、端口未监听、防火墙、安全组、账号权限（PostgreSQL 还需检查 `pg_hba.conf` 认证规则） |
+| 连接数满 | 应用连接未释放、连接池配置过大、`max_connections` 过小 |
+| 查询慢 | 缺少索引、SQL 写法问题、数据量大、锁等待（PostgreSQL 可用 `EXPLAIN ANALYZE` 定位） |
 | 主从延迟 | 从库性能不足、大事务、网络延迟 |
-| 磁盘满 | binlog、慢日志、数据文件增长过快 |
+| 磁盘满 | MySQL 常见于 binlog/慢日志增长；PostgreSQL 常见于 WAL 日志堆积（尤其复制槽未及时消费时） |
+
+MySQL 和 PostgreSQL 都是关系型数据库，核心运维关注点（连接、慢查询、复制、锁、备份恢复）是相通的，主要差异在具体命令、配置文件位置和权限模型（PostgreSQL 的角色系统比 MySQL 的用户系统更细粒度）。
 
 ---
 

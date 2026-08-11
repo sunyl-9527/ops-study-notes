@@ -14,6 +14,12 @@ WSL 发行版：`archlinux-lab`，WSL 版本 2，用户 `sunyl`
 
 **修复**：移除三行中的 `systemd` 后缀：
 
+先备份原文件，避免改错后无法恢复：
+
+```bash
+sudo cp /etc/nsswitch.conf /etc/nsswitch.conf.bak
+```
+
 ```diff
 -passwd: files systemd
 +passwd: files
@@ -26,6 +32,20 @@ WSL 发行版：`archlinux-lab`，WSL 版本 2，用户 `sunyl`
 ```
 
 文件路径：`/etc/nsswitch.conf`
+
+**回滚**：如果修改后用户查找、权限或其他登录相关行为出现异常，可用备份文件恢复：
+
+```bash
+sudo cp /etc/nsswitch.conf.bak /etc/nsswitch.conf
+```
+
+若已经因为改坏配置导致 `wsl -d archlinux-lab` 完全无法登录、连 `sudo` 都进不去，可以在 Windows 端以 root 身份直接进入该发行版修复：
+
+```powershell
+wsl -d archlinux-lab -u root
+```
+
+进入后用上面的备份文件恢复，或重新编辑 `/etc/nsswitch.conf`。
 
 ---
 
@@ -139,10 +159,15 @@ color.ui      = auto
 
 ## 快速验证
 
-在 WSL 中运行以下命令确认环境正常：
+在 Windows 端（PowerShell / CMD）执行以下命令进入该发行版，再在里面确认环境正常：
+
+```powershell
+wsl -d archlinux-lab
+```
+
+进入后在 archlinux-lab 内部执行：
 
 ```bash
-wsl -d archlinux-lab
 id                    # 应显示 uid=1000(sunyl)
 git --version
 nvim --version

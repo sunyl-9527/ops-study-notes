@@ -1,4 +1,4 @@
-﻿# WSL 学习笔记
+# WSL 学习笔记
 
 > 适用对象：希望在 Windows 上学习 Linux、开发环境搭建、云计算运维实验和容器化实践的学习者。
 >
@@ -33,14 +33,14 @@ WSL 适合这些场景：
 | Linux 兼容性 | 一般 | 更好 |
 | 文件系统性能 | Windows 文件访问较快 | Linux 文件系统内性能更好 |
 | Docker 支持 | 不适合 | 推荐 |
-| 网络模型 | 与 Windows 更接近 | 有独立虚拟网络 |
+| 网络模型 | 与 Windows 更接近 | 有独立虚拟网络（可选镜像模式） |
 | 推荐程度 | 特殊场景使用 | 日常推荐 |
 
 建议：
 
 - 新学习者优先使用 `WSL 2`。
 - Docker、Kubernetes、云原生实验优先使用 `WSL 2`。
-- 如果大量操作 Windows 文件系统，可以关注 WSL 2 与 Windows 目录之间的性能差异。
+- 如果大量操作 Windows 文件系统，可以关注 WSL 2 与 Windows 目录之间的性能差异（见「文件互通」一节的性能提示）。
 
 ---
 
@@ -86,7 +86,18 @@ wsl --install -d Ubuntu
 wsl --list --online
 ```
 
-### 3. 查看已安装发行版
+### 3. 保持 WSL 本体更新
+
+WSL 引擎本身（内核、`wsl.exe`）会独立于发行版更新，建议定期检查：
+
+```powershell
+wsl --update
+wsl --version
+```
+
+如果遇到内核相关的异常行为或新特性（如镜像网络模式）不生效，优先确认 WSL 版本是否是最新。
+
+### 4. 查看已安装发行版
 
 ```powershell
 wsl --list --verbose
@@ -104,19 +115,19 @@ wsl -l -v
 - `STATE`：运行状态。
 - `VERSION`：WSL 版本，通常建议为 `2`。
 
-### 4. 设置默认 WSL 版本
+### 5. 设置默认 WSL 版本
 
 ```powershell
 wsl --set-default-version 2
 ```
 
-### 5. 修改某个发行版的 WSL 版本
+### 6. 修改某个发行版的 WSL 版本
 
 ```powershell
 wsl --set-version Ubuntu 2
 ```
 
-### 6. 设置默认发行版
+### 7. 设置默认发行版
 
 ```powershell
 wsl --set-default Ubuntu
@@ -144,7 +155,7 @@ wsl -d Ubuntu
 wsl -d Ubuntu -u root
 ```
 
-在 WSL 中直接执行 Linux 命令：
+在 WSL 中直接执行 Linux 命令（这一步在 Windows 侧的 PowerShell / CMD 中执行，不是在 WSL 内部）：
 
 ```powershell
 wsl -d Ubuntu -- uname -a
@@ -173,26 +184,9 @@ wsl --shutdown
 wsl --unregister Ubuntu
 ```
 
-### 4. 导出与导入发行版
+### 4. 导出、导入与迁移
 
-导出备份：
-
-```powershell
-wsl --export Ubuntu D:\backup\ubuntu-wsl.tar
-```
-
-导入恢复：
-
-```powershell
-wsl --import Ubuntu-Restore D:\WSL\Ubuntu-Restore D:\backup\ubuntu-wsl.tar --version 2
-```
-
-这组命令适合：
-
-- 迁移 WSL 到其他磁盘。
-- 重装系统前备份环境。
-- 保存一个干净实验快照。
-- 复制多套类似实验环境。
+导出、导入、跨磁盘迁移和 VHD 相关命令统一放在「十六、备份、迁移与恢复」一节说明，避免重复。日常只需记住：**注销或重装前，先导出一份备份**。
 
 ---
 
@@ -221,13 +215,13 @@ C:\Projects
 
 ### 2. 在 Windows 中访问 WSL 文件
 
-在资源管理器地址栏输入：
+现在推荐使用 `\\wsl.localhost\`：
 
 ```text
-\\wsl$
+\\wsl.localhost\Ubuntu
 ```
 
-或者进入指定发行版：
+旧路径 `\\wsl$` 仍然可用（作为兼容别名保留），但新文档和新版本资源管理器地址栏建议统一使用 `\\wsl.localhost\`：
 
 ```text
 \\wsl$\Ubuntu
@@ -253,6 +247,13 @@ C:\Projects\ops-study-notes
 - Windows 软件频繁使用的文档和笔记，可以放在 Windows 文件系统。
 - 不要在 Windows 和 WSL 中同时用两个工具高频修改同一个文件，避免状态混乱。
 
+### 4. 性能与注意事项
+
+- 跨文件系统访问（WSL 读写 `/mnt/c/...`，或 Windows 读写 `\\wsl.localhost\...`）比在各自原生文件系统内操作慢很多，大量小文件的项目（如 `node_modules`）尤其明显。
+- 文件监听（inotify）在 `/mnt` 挂载的 Windows 目录下经常不可靠，webpack、Vite 等工具的热更新在这类路径下可能不生效；需要热更新的前端项目建议放进 WSL 原生文件系统。
+- Git 换行符：跨系统协作建议在 WSL 内统一设置 `git config --global core.autocrlf input`，避免因为换行符差异产生大量无意义的 diff。
+- `/etc/wsl.conf` 中 `[automount] options=metadata` 可以让 `/mnt` 下的文件支持 Linux 权限位（chmod 生效），否则挂载的 Windows 文件权限固定，某些工具（如 SSH 私钥权限检查）会报错。
+
 ---
 
 ## 六、常用 WSL 命令速查
@@ -261,6 +262,7 @@ C:\Projects\ops-study-notes
 |---|---|
 | 查看状态 | `wsl --status` |
 | 查看版本 | `wsl --version` |
+| 更新 WSL 本体 | `wsl --update` |
 | 查看已安装发行版 | `wsl -l -v` |
 | 查看可安装发行版 | `wsl --list --online` |
 | 安装默认发行版 | `wsl --install` |
@@ -272,8 +274,12 @@ C:\Projects\ops-study-notes
 | 关闭所有 WSL | `wsl --shutdown` |
 | 设置默认发行版 | `wsl --set-default Ubuntu` |
 | 设置默认 WSL 版本 | `wsl --set-default-version 2` |
-| 导出备份 | `wsl --export Ubuntu D:\backup\ubuntu.tar` |
-| 导入恢复 | `wsl --import Ubuntu2 D:\WSL\Ubuntu2 D:\backup\ubuntu.tar --version 2` |
+| 查看/管理发行版属性 | `wsl --manage Ubuntu --set-sparse true` |
+| 导出备份（tar） | `wsl --export Ubuntu D:\backup\ubuntu.tar` |
+| 导出备份（VHD，体积更小） | `wsl --export Ubuntu D:\backup\ubuntu.vhdx --vhd` |
+| 导入恢复（tar） | `wsl --import Ubuntu2 D:\WSL\Ubuntu2 D:\backup\ubuntu.tar --version 2` |
+| 原地导入已有 VHD | `wsl --import-in-place Ubuntu2 D:\WSL\Ubuntu2\ext4.vhdx` |
+| 移动发行版磁盘位置 | `wsl --manage Ubuntu --move D:\WSL\Ubuntu` |
 | 注销发行版 | `wsl --unregister Ubuntu` |
 
 ---
@@ -323,13 +329,7 @@ free -h
 
 ### 4. 设置默认用户
 
-不同发行版设置方式可能不同。Ubuntu 常见方式：
-
-```powershell
-ubuntu config --default-user username
-```
-
-通用方式是编辑 WSL 内部的 `/etc/wsl.conf`：
+推荐优先编辑 WSL 内部的 `/etc/wsl.conf`，这是跨发行版都适用的通用方式：
 
 ```ini
 [user]
@@ -343,11 +343,19 @@ wsl --terminate Ubuntu
 wsl -d Ubuntu
 ```
 
+较新版本的 WSL（先用 `wsl --version` 确认版本）也提供了不进入发行版即可设置默认用户的命令：
+
+```powershell
+wsl --manage Ubuntu --set-default-user username
+```
+
+早期文档中常见的 `ubuntu config --default-user username` 依赖官方商店发行版自带的启动器命令，不是所有发行版都提供，不建议作为首选方式。
+
 ---
 
-## 八、wsl.conf 配置
+## 八、wsl.conf 配置（发行版级）
 
-WSL 的部分行为可以通过 `/etc/wsl.conf` 配置。
+WSL 的部分行为可以通过发行版内部的 `/etc/wsl.conf` 配置，作用范围仅限该发行版。
 
 常见配置示例：
 
@@ -370,10 +378,11 @@ appendWindowsPath=true
 
 常见配置说明：
 
-- `[boot] systemd=true`：启用 systemd。
+- `[boot] systemd=true`：启用 systemd，详见「systemd 与服务管理」一节。
 - `[user] default=username`：设置默认登录用户。
 - `[automount] enabled=true`：自动挂载 Windows 磁盘。
 - `[automount] root=/mnt/`：设置挂载根路径。
+- `[automount] options=metadata`：让 `/mnt` 下文件支持 Linux 权限位，见「文件互通」中的性能提示。
 - `[interop] enabled=true`：允许 WSL 调用 Windows 程序。
 - `appendWindowsPath=true`：把 Windows PATH 加入 WSL。
 
@@ -386,23 +395,51 @@ wsl -d Ubuntu
 
 ---
 
-## 九、systemd 与服务管理
+## 九、.wslconfig 配置（宿主机级）
 
-### 1. 启用 systemd
+`/etc/wsl.conf` 只影响单个发行版，而 `.wslconfig` 影响的是 WSL 2 虚拟机本身（内存、CPU、网络模式等），对所有发行版生效。
 
-编辑 `/etc/wsl.conf`：
+文件位置（Windows 侧）：
 
-```ini
-[boot]
-systemd=true
+```text
+%UserProfile%\.wslconfig
 ```
 
-然后在 Windows 中执行：
+常见配置示例：
+
+```ini
+[wsl2]
+memory=6GB
+processors=4
+swap=2GB
+localhostForwarding=true
+networkingMode=mirrored
+dnsTunneling=true
+autoMemoryReclaim=gradual
+sparseVhd=true
+```
+
+常见配置说明：
+
+- `memory` / `processors` / `swap`：限制 WSL 2 虚拟机可使用的内存、CPU 核心数和交换空间上限。不设置时 WSL 默认会占用较多宿主机内存，长期开发机建议显式限制，避免和其他程序抢内存。
+- `networkingMode=mirrored`：启用镜像网络模式（需要较新版本 Windows 11 和 WSL），让 WSL 直接共享 Windows 主机的网络接口，`localhost` 在两个方向都能互通，也能更好地兼容 VPN。默认模式是 NAT，网络访问方式见「网络访问」一节的说明。
+- `dnsTunneling=true`：让 WSL 的 DNS 请求通过 Windows 主机转发，通常能明显改善 VPN 环境下 WSL 内部 DNS 解析失败的问题。
+- `autoMemoryReclaim=gradual`：WSL 2 虚拟机在空闲时逐步归还已分配但未使用的内存给 Windows，缓解“内存只增不减”的问题。
+- `sparseVhd=true`：让虚拟磁盘文件保持稀疏，删除 WSL 内部文件后磁盘占用能自动收缩，而不是一直增长。
+
+修改 `.wslconfig` 后，需要完全关闭 WSL 才能生效：
 
 ```powershell
 wsl --shutdown
-wsl -d Ubuntu
 ```
+
+---
+
+## 十、systemd 与服务管理
+
+### 1. 启用 systemd
+
+在「wsl.conf 配置」一节中把 `[boot] systemd=true` 写入对应发行版的 `/etc/wsl.conf`，然后执行 `wsl --shutdown` 并重新进入该发行版即可生效。
 
 ### 2. 验证 systemd
 
@@ -431,35 +468,32 @@ sudo systemctl restart ssh
 
 ---
 
-## 十、网络访问
+## 十一、网络访问
 
-### 1. WSL 访问 Windows
+WSL 2 有两种网络模式，行为差异较大，排查网络问题前先确认当前用的是哪种模式。
 
-WSL 通常可以访问 Windows 主机。常见方式是读取 `/etc/resolv.conf` 中的 nameserver。
+### 1. NAT 模式（默认）
 
-```bash
-cat /etc/resolv.conf
-```
+这是没有配置 `.wslconfig` 中 `networkingMode` 时的默认模式，WSL 处于一个独立的虚拟子网中。
 
-也可以测试访问 Windows 上运行的服务：
-
-```bash
-curl http://localhost:端口
-```
-
-### 2. Windows 访问 WSL
-
-如果 WSL 中启动了 Web 服务：
+- **Windows 访问 WSL**：默认开启 `localhostForwarding`，Windows 上直接访问 `http://localhost:端口` 就能打到 WSL 里监听的服务，无需额外配置。
+- **WSL 访问 Windows**：`localhost` 通常不指向 Windows 主机，需要用 WSL 侧看到的网关地址，例如：
 
 ```bash
-python3 -m http.server 8000
+ip route show default | awk '{print $3}'
+# 或
+cat /etc/resolv.conf   # nameserver 字段在多数默认配置下等于宿主机地址
 ```
 
-Windows 浏览器通常可以访问：
+`/etc/resolv.conf` 里的 `nameserver` 通常等于宿主机在 NAT 子网中的地址，可以用来访问 Windows 上监听在该地址的服务；但如果发行版设置了自定义 DNS（`generateResolvConf=false` 或手动编辑过该文件），这个值就不再可靠，优先用 `ip route` 拿网关地址。
 
-```text
-http://localhost:8000
-```
+### 2. 镜像网络模式（mirrored，较新版本 WSL 支持）
+
+在 `.wslconfig` 中设置 `networkingMode=mirrored` 后，WSL 直接共享 Windows 主机的网络接口：
+
+- `localhost` 在 Windows 和 WSL 之间双向互通，不用再区分方向。
+- 对 VPN、防火墙的兼容性通常更好，尤其是企业 VPN 环境下 WSL 网络异常的问题，很多可以通过切换到镜像模式解决。
+- 需要确认 Windows 版本和 WSL 版本支持该特性（`wsl --update` 到最新版本）。
 
 ### 3. 查看监听端口
 
@@ -487,16 +521,16 @@ Get-NetTCPConnection -State Listen
 
 排查思路：
 
+- 先确认当前网络模式（NAT 还是 mirrored），按对应模式的访问方式验证。
 - 检查 Windows 网络是否正常。
 - 执行 `wsl --shutdown` 后重新启动。
-- 检查 `/etc/resolv.conf`。
-- 检查 Windows 防火墙。
+- VPN 环境下优先尝试 `.wslconfig` 里的 `networkingMode=mirrored` 和 `dnsTunneling=true`。
 - 检查代理环境变量：`http_proxy`、`https_proxy`。
 - 检查服务是否监听在 `0.0.0.0` 或正确地址上。
 
 ---
 
-## 十一、在 WSL 中使用 Windows 程序
+## 十二、在 WSL 中使用 Windows 程序
 
 WSL 可以直接调用 Windows 程序。
 
@@ -512,7 +546,7 @@ explorer.exe .
 code .
 ```
 
-前提是已安装 VS Code，并安装 Remote - WSL 扩展。
+详细的插件配置和使用建议见「WSL 与 VS Code」一节。
 
 ### 3. 调用 Windows 命令
 
@@ -538,7 +572,7 @@ wslpath 'C:\Projects'
 
 ---
 
-## 十二、开发环境实践
+## 十三、开发环境实践
 
 ### 1. Git
 
@@ -546,13 +580,14 @@ wslpath 'C:\Projects'
 git --version
 git config --global user.name "your-name"
 git config --global user.email "your-email@example.com"
+git config --global core.autocrlf input
 ```
 
 建议：
 
 - Windows Git 和 WSL Git 可以同时存在。
 - 同一个仓库尽量固定使用一种环境操作。
-- 注意换行符设置，避免 Windows 和 Linux 换行差异造成大量无意义变更。
+- `core.autocrlf input` 可以避免 Windows/Linux 换行符差异造成大量无意义的 diff，详见「文件互通」中的性能提示。
 
 ### 2. Python
 
@@ -587,7 +622,7 @@ cat ~/.ssh/id_ed25519.pub
 
 ---
 
-## 十三、WSL 与 Docker
+## 十四、WSL 与 Docker
 
 ### 1. 推荐方式
 
@@ -606,6 +641,8 @@ docker version
 docker ps
 docker run hello-world
 ```
+
+不建议在同一个发行版里再额外安装、启动独立的 Docker Engine（`dockerd`），这会和 Docker Desktop 提供的 daemon 争抢端口和资源，出现难以定位的连接异常。二选一即可：要么用 Docker Desktop 的 WSL 集成，要么在发行版内自行安装 Docker Engine（不装 Docker Desktop）。
 
 ### 2. Docker Compose
 
@@ -637,7 +674,7 @@ docker compose down
 
 ---
 
-## 十四、WSL 与 VS Code
+## 十五、WSL 与 VS Code
 
 ### 1. 推荐插件
 
@@ -662,30 +699,62 @@ VS Code 左下角出现 `WSL: Ubuntu` 之类标识，说明当前窗口连接到
 
 ---
 
-## 十五、备份、迁移与恢复
+## 十六、备份、迁移与恢复
 
 ### 1. 导出备份
 
+传统 tar 格式，通用但体积较大：
+
 ```powershell
-wsl --export Ubuntu D:\backup\ubuntu-2026-07-11.tar
+wsl --export Ubuntu D:\backup\ubuntu-2026-08-12.tar
+```
+
+较新版本支持直接导出为 VHD，体积更小、恢复更快：
+
+```powershell
+wsl --export Ubuntu D:\backup\ubuntu-2026-08-12.vhdx --vhd
 ```
 
 ### 2. 导入恢复
 
+从 tar 导入：
+
 ```powershell
-wsl --import Ubuntu-Restore D:\WSL\Ubuntu-Restore D:\backup\ubuntu-2026-07-11.tar --version 2
+wsl --import Ubuntu-Restore D:\WSL\Ubuntu-Restore D:\backup\ubuntu-2026-08-12.tar --version 2
+```
+
+如果已经有现成的 VHD 磁盘文件（例如从旧机器直接复制过来的），可以原地导入，不需要重新解压：
+
+```powershell
+wsl --import-in-place Ubuntu-Restore D:\WSL\Ubuntu-Restore\ext4.vhdx
 ```
 
 ### 3. 迁移到其他磁盘
 
-基本思路：
+较新版本可以直接移动发行版的磁盘位置，不需要导出再导入：
+
+```powershell
+wsl --manage Ubuntu --move D:\WSL\Ubuntu
+```
+
+如果 WSL 版本不支持 `--move`，回退到传统方式：
 
 1. `wsl --export` 导出原发行版。
 2. `wsl --unregister` 删除原发行版。
 3. `wsl --import` 导入到新路径。
 4. 重新设置默认用户和默认发行版。
 
-### 4. 备份建议
+### 4. 磁盘瘦身
+
+启用稀疏 VHD 后，磁盘占用能随着内部文件删除自动收缩：
+
+```powershell
+wsl --manage Ubuntu --set-sparse true
+```
+
+也可以在 `.wslconfig` 中全局设置 `sparseVhd=true`，对新导入的发行版默认生效。
+
+### 5. 备份建议
 
 - 重要环境改动前先导出备份。
 - 做大型实验前先保留一个干净快照。
@@ -694,7 +763,7 @@ wsl --import Ubuntu-Restore D:\WSL\Ubuntu-Restore D:\backup\ubuntu-2026-07-11.ta
 
 ---
 
-## 十六、常见故障排查
+## 十七、常见故障排查
 
 ### 1. WSL 启动失败
 
@@ -745,6 +814,7 @@ ping github.com
 - 先确认 Windows 网络正常。
 - 执行 `wsl --shutdown` 重启 WSL。
 - 检查 VPN、代理、防火墙影响。
+- VPN 环境优先尝试 `.wslconfig` 中的 `dnsTunneling=true` 或 `networkingMode=mirrored`。
 - 必要时重新生成或手动配置 DNS。
 
 ### 4. 文件权限异常
@@ -776,11 +846,11 @@ docker system df
 docker system prune
 ```
 
-如果使用 Docker Desktop，也可以在 Docker Desktop 中清理镜像、容器和卷。
+如果使用 Docker Desktop，也可以在 Docker Desktop 中清理镜像、容器和卷；长期占用持续增长，也可以配合「备份、迁移与恢复」一节的稀疏 VHD 设置。
 
 ---
 
-## 十七、学习路线
+## 十八、学习路线
 
 ### 第一阶段：会安装和启动
 
@@ -802,7 +872,7 @@ docker system prune
 
 - 设置默认发行版。
 - 设置 WSL 版本。
-- 导出与导入。
+- 导出与导入（含 VHD 方式）。
 - 注销发行版。
 - 设置默认用户。
 
@@ -841,7 +911,7 @@ docker system prune
 - Docker Compose。
 - Nginx、Redis、MySQL 等中间件实验。
 - Ansible 控制端实验。
-- Kubernetes 本地实验入口。
+- Kubernetes 本地实验入口（规划中，暂无对应笔记）。
 
 ### 第六阶段：会排查和维护
 
@@ -849,15 +919,14 @@ docker system prune
 
 需要掌握：
 
-- 网络故障排查。
-- DNS 问题处理。
+- 网络故障排查（含 NAT / 镜像模式区分）。
+- `.wslconfig` 与 `wsl.conf` 调优。
 - 文件权限问题处理。
-- 备份恢复。
-- 磁盘空间清理。
+- 备份恢复与磁盘瘦身。
 
 ---
 
-## 十八、实践任务
+## 十九、实践任务
 
 ### 任务一：安装并验证 WSL
 
@@ -875,7 +944,7 @@ docker system prune
 - 在 Windows 桌面创建一个测试目录。
 - 在 WSL 中通过 `/mnt/c/...` 访问该目录。
 - 在 WSL 的 `/home` 下创建一个项目目录。
-- 在 Windows 资源管理器中通过 `\\wsl$` 访问该目录。
+- 在 Windows 资源管理器中通过 `\\wsl.localhost\` 访问该目录。
 
 ### 任务三：搭建基础开发环境
 
@@ -886,13 +955,14 @@ docker system prune
 - 创建 SSH key。
 - 使用 VS Code Remote - WSL 打开项目。
 
-### 任务四：运行一个 Web 服务
+### 任务四：运行一个 Web 服务并验证网络模式
 
 完成：
 
 - 在 WSL 中运行 `python3 -m http.server 8000`。
 - 在 Windows 浏览器访问 `http://localhost:8000`。
 - 使用 `ss -lntp` 查看监听端口。
+- 确认当前是 NAT 模式还是镜像模式，并验证对应的 Windows↔WSL 访问方式。
 
 ### 任务五：Docker 实验
 
@@ -907,13 +977,13 @@ docker system prune
 
 完成：
 
-- 使用 `wsl --export` 导出发行版。
-- 使用 `wsl --import` 导入为一个新发行版。
+- 使用 `wsl --export` 导出发行版（tar 或 VHD 格式）。
+- 使用 `wsl --import` 或 `wsl --import-in-place` 导入为一个新发行版。
 - 验证新发行版可以正常启动。
 
 ---
 
-## 十九、学习建议
+## 二十、学习建议
 
 - WSL 适合作为学习和实验环境，但不要把它完全等同于生产 Linux 服务器。
 - Linux 项目尽量放在 WSL 内部文件系统，性能和权限体验更好。
@@ -921,10 +991,11 @@ docker system prune
 - 做 Docker 和云原生实验时优先使用 WSL 2。
 - 学习 Windows 运维时结合 PowerShell，学习 Linux 运维时结合 WSL。
 - 记录每次环境配置步骤，方便重装或迁移时快速恢复。
+- 长期使用建议同时维护好 `.wslconfig`（宿主机资源与网络）和 `/etc/wsl.conf`（发行版行为），两者作用范围不同，容易混淆。
 
 ---
 
-## 二十、总结
+## 二十一、总结
 
 WSL 的学习主线可以概括为：
 

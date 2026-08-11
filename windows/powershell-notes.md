@@ -481,15 +481,20 @@ Restart-Service -Name spooler
 ### 3. 事件日志
 
 ```powershell
-# 查看系统日志最近 20 条
+# 查看系统日志最近 20 条（旧接口，仅支持经典日志，PowerShell 7 中已不可用）
 Get-EventLog -LogName System -Newest 20
 
 # 查看应用日志中的错误
 Get-EventLog -LogName Application -EntryType Error -Newest 20
 
-# 新版事件日志命令
+# 推荐使用的新版事件日志命令，性能更好，兼容经典日志和新版 ETW 日志
 Get-WinEvent -LogName System -MaxEvents 20
+
+# 按条件筛选，比 Get-EventLog 的过滤能力更强
+Get-WinEvent -FilterHashtable @{ LogName = 'System'; Level = 2; StartTime = (Get-Date).AddDays(-1) }
 ```
+
+`Get-EventLog` 是 Windows PowerShell 5.1 时代的旧接口，只能读取经典事件日志，在 PowerShell 7+ 中已被移除；新脚本应优先使用 `Get-WinEvent`。
 
 ### 4. 网络排查
 
@@ -525,6 +530,33 @@ Get-ComputerInfo
 # 查看系统启动时间
 (Get-CimInstance Win32_OperatingSystem).LastBootUpTime
 ```
+
+### 6. 计划任务
+
+```powershell
+# 查看所有计划任务
+Get-ScheduledTask
+
+# 查看指定计划任务的运行状态
+Get-ScheduledTaskInfo -TaskName "MyBackupTask"
+
+# 创建一个每天凌晨 2 点执行的计划任务
+$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-File C:\scripts\backup.ps1"
+$trigger = New-ScheduledTaskTrigger -Daily -At 2am
+Register-ScheduledTask -TaskName "MyBackupTask" -Action $action -Trigger $trigger -User "SYSTEM"
+
+# 手动触发一次
+Start-ScheduledTask -TaskName "MyBackupTask"
+
+# 禁用/启用
+Disable-ScheduledTask -TaskName "MyBackupTask"
+Enable-ScheduledTask -TaskName "MyBackupTask"
+
+# 删除
+Unregister-ScheduledTask -TaskName "MyBackupTask" -Confirm:$false
+```
+
+计划任务是 Windows 上等价于 Linux `cron` 的机制，适合把巡检、备份、清理脚本设置为定时自动执行。
 
 ---
 
@@ -612,6 +644,44 @@ Import-Module Az
 - `ActiveDirectory`：管理 AD 域资源。
 - `Pester`：PowerShell 测试框架。
 - `PSReadLine`：命令行编辑增强。
+
+### 4. Windows 系统级包管理（WinGet）
+
+`winget` 是 Windows 自带的系统级包管理器，用来安装日常工具软件，和 PowerShell 模块（`Install-Module`）不是一回事：
+
+```powershell
+# 搜索软件包
+winget search git
+
+# 安装软件包
+winget install --id Git.Git -e
+
+# 查看已安装的软件包
+winget list
+
+# 升级所有可升级的软件包
+winget upgrade --all
+```
+
+### 5. 命令行环境个性化配置
+
+```powershell
+# 查看当前用户的 profile 脚本路径（不存在时需要自己创建）
+$PROFILE
+
+# 快速编辑 profile
+notepad $PROFILE
+
+# 安装/更新 PSReadLine，获得语法高亮、历史搜索、预测建议等增强
+Install-Module PSReadLine -Scope CurrentUser -Force
+
+# 在 profile 中开启预测文本（历史命令联想）
+Set-PSReadLineOption -PredictionSource History
+```
+
+- `$PROFILE` 指向的脚本会在每次打开 PowerShell 时自动执行，适合放常用别名、函数和模块导入。
+- 修改 profile 后需要新开一个窗口或 `. $PROFILE` 重新加载才能生效。
+- 日常终端建议使用 [Windows Terminal](https://apps.microsoft.com/detail/9n0dx20hk701)（可用 `winget install Microsoft.WindowsTerminal` 安装），比传统控制台支持多标签页、更好的字体渲染和主题配置。
 
 ---
 
@@ -732,7 +802,41 @@ Invoke-Command -ComputerName server01 -Credential $cred -ScriptBlock {
 
 不要把明文密码直接写进脚本。需要持久化凭据时，应使用更安全的凭据管理方式，例如 Windows Credential Manager、SecretManagement 模块或平台提供的密钥管理服务。
 
-### 3. 脚本安全建议
+### 3. 防火墙规则
+
+```powershell
+# 查看所有防火墙规则
+Get-NetFirewallRule
+
+# 查看已启用的入站规则
+Get-NetFirewallRule -Direction Inbound -Enabled True
+
+# 新建一条允许入站的规则（例如放行某端口）
+New-NetFirewallRule -DisplayName "Allow-8080" -Direction Inbound -LocalPort 8080 -Protocol TCP -Action Allow
+
+# 禁用/删除规则
+Disable-NetFirewallRule -DisplayName "Allow-8080"
+Remove-NetFirewallRule -DisplayName "Allow-8080"
+```
+
+### 4. Windows Defender
+
+```powershell
+# 查看 Defender 当前状态（实时保护、病毒库版本等）
+Get-MpComputerStatus
+
+# 触发一次快速扫描
+Start-MpScan -ScanType QuickScan
+
+# 查看/更新病毒定义
+Get-MpThreatCatalog
+Update-MpSignature
+
+# 临时排除某个路径（谨慎使用，扫描时会跳过该路径）
+Add-MpPreference -ExclusionPath "C:\dev\workspace"
+```
+
+### 5. 脚本安全建议
 
 - 不随意执行来源不明的 `.ps1` 脚本。
 - 执行远程下载脚本前先阅读内容。

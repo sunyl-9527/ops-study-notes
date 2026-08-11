@@ -168,6 +168,36 @@ docker load -i nginx.tar
 - 删除镜像前，如果仍有容器依赖它，通常会失败。
 - 离线传输镜像时优先使用 `save/load`，不要依赖 `commit` 生成临时镜像。
 
+### 仓库认证
+
+```bash
+# 登录私有仓库，交互式输入密码
+docker login registry.example.com
+
+# CI/CD 等非交互场景，避免密码出现在命令历史和进程列表中
+echo "$REGISTRY_TOKEN" | docker login registry.example.com -u ci-bot --password-stdin
+
+# 登出，清理本地缓存的凭据
+docker logout registry.example.com
+```
+
+- 优先使用有效期可控的访问 Token，而不是账号主密码。
+- 登录凭据默认写入 `~/.docker/config.json`，生产环境建议配置 [credential helper](https://docs.docker.com/engine/reference/commandline/login/#credential-stores)（如 `docker-credential-pass`、`docker-credential-secretservice`），避免明文落盘。
+- 使用自建仓库且证书为私有 CA 签发时，需要把 CA 证书放入 Docker 信任目录，否则 `pull/push` 会报证书校验失败。
+
+### 镜像安全基线
+
+- 优先使用固定 `digest`（如 `nginx@sha256:...`）而不是可变标签，避免同一 tag 背后镜像内容被悄悄替换。
+- 用 [Trivy](https://github.com/aquasecurity/trivy) 或 `docker scout` 扫描已知漏洞：
+
+```bash
+trivy image myrepo/nginx:v1.0
+docker scout cves myrepo/nginx:v1.0
+```
+
+- 基础镜像和依赖需要定期重新构建以获取安全补丁，不要长期固定在某个旧 tag 不更新。
+- 生产镜像尽量以非 root 用户运行，必要时用 `--read-only` 和 `--cap-drop=ALL` 收紧运行时权限。
+
 ---
 
 ## 5. 容器操作
@@ -460,6 +490,7 @@ docker compose up -d --scale web=3
 - 新版 Compose 通常直接写 `services:` 即可，不一定要保留 `version` 字段。
 - 服务之间互相访问时，用服务名，例如 `db`、`redis`。
 - `depends_on` 只能控制启动顺序，不能保证服务已经“可用”。
+- 上面 `web` 服务固定绑定了宿主机 `8000` 端口，多个副本会抢占同一端口导致 `--scale web=3` 启动失败。需要横向扩容时，去掉 `ports` 里的固定映射（或改成端口范围），改由前面的 Nginx/负载均衡容器统一对外暴露端口。
 
 ---
 

@@ -10,6 +10,7 @@
 4. [Docker 学习文档](./docker-notes.md)：学习镜像、容器、网络、存储与 Compose。
 5. [云计算运维中间件学习笔记](./cloud-ops-middleware-notes.md)：扩展数据库、缓存、消息队列、日志和监控。
 6. [Ansible + VMware 实验](./ansible-vmware-lab.md)：搭建自动化配置管理实验环境。
+7. [Arch Linux 虚拟机优化](./archlinux-vm-optimization.md)：为 Ansible 实验节点或本地实验环境调优虚拟机。
 
 ## 文档定位
 
@@ -21,5 +22,8 @@
 | [docker-notes.md](./docker-notes.md) | 查询容器日常操作并完成 Compose 实践 |
 | [cloud-ops-middleware-notes.md](./cloud-ops-middleware-notes.md) | 学习常见中间件的部署与运维关注点 |
 | [ansible-vmware-lab.md](./ansible-vmware-lab.md) | 在隔离网络中完成多节点 Ansible 实验 |
+| [archlinux-vm-optimization.md](./archlinux-vm-optimization.md) | 优化 VMware 中 Arch Linux 实验节点的性能与资源占用 |
+
+Kubernetes、Terraform 等云原生和基础设施即代码相关笔记尚未建立，属于规划中内容，见 [cloud-ops-roadmap.md](./cloud-ops-roadmap.md) 中的第七、八阶段说明。
 
 完成每个专题后，至少做一次从零部署、一次故障注入和一次清理恢复，并把验证命令写进实验记录。

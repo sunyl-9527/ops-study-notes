@@ -21,9 +21,11 @@
   - [5.3 负载均衡](#53-负载均衡)
   - [5.4 同一端口区分前后端](#54-同一端口区分前后端)
   - [5.5 HTTPS 配置](#55-https-配置)
+  - [5.6 限流配置](#56-限流配置)
+  - [5.7 HTTPS 证书自动续期与验证](#57-https-证书自动续期与验证)
 - [6. 关键指令速查](#6-关键指令速查)
 - [7. 常用内置变量](#7-常用内置变量)
-- [8. 调试技巧](#8-调试技巧)
+- [8. 调试技巧与常见故障排查](#8-调试技巧与常见故障排查)
 - [9. 与 Apache 的简要对比](#9-与-apache-的简要对比)
 - [10. 学习路径建议](#10-学习路径建议)
 - [11. 动手实践：从零到反向代理](#11-动手实践从零到反向代理)
@@ -332,6 +334,71 @@ server {
 }
 ```
 
+### 5.6 限流配置
+
+用 `limit_req_zone` 限制请求速率，防止单个客户端把后端打垮：
+
+```nginx
+http {
+    # 按客户端 IP 划分限流区，10MB 共享内存约能存 16 万个 IP 状态，速率限制为每秒 5 个请求
+    limit_req_zone $binary_remote_addr zone=api_limit:10m rate=5r/s;
+
+    server {
+        listen 80;
+        server_name api.mysite.com;
+
+        location / {
+            # burst 允许瞬时突发请求排队等待，nodelay 表示突发请求不额外排队延迟
+            limit_req zone=api_limit burst=10 nodelay;
+
+            proxy_pass http://127.0.0.1:3000;
+        }
+    }
+}
+```
+
+也可以限制并发连接数：
+
+```nginx
+http {
+    limit_conn_zone $binary_remote_addr zone=conn_limit:10m;
+
+    server {
+        location / {
+            limit_conn conn_limit 20;   # 单个 IP 最多 20 个并发连接
+        }
+    }
+}
+```
+
+超出限流的请求默认返回 `503`，可以用 `limit_req_status` / `limit_conn_status` 自定义状态码。
+
+### 5.7 HTTPS 证书自动续期与验证
+
+生产环境通常用 [Let's Encrypt](https://letsencrypt.org/) + `certbot` 签发和续期证书，证书有效期 90 天，需要自动续期：
+
+```bash
+# 首次签发（nginx 插件会自动写入 server 块的 ssl_certificate 配置）
+sudo certbot --nginx -d mysite.com -d www.mysite.com
+
+# certbot 安装时通常会自带一个 systemd timer 或 cron 任务自动续期，可以确认是否存在
+systemctl list-timers | grep certbot
+# 或
+cat /etc/cron.d/certbot
+
+# 手动测试续期流程是否正常（不会真正更换证书）
+sudo certbot renew --dry-run
+
+# 查看已管理的证书列表和到期时间
+sudo certbot certificates
+```
+
+续期后 `certbot` 会自动执行 `nginx -s reload` 让新证书生效（可以在 `/etc/letsencrypt/renewal/mysite.com.conf` 里确认 `renew_hook` 或 `deploy_hook` 配置）。日常运维建议：
+
+- 定期检查 `certbot certificates` 的到期时间，不要完全依赖自动任务。
+- 证书文件路径变化后（例如迁移服务器），记得同步更新 `nginx.conf` 里的 `ssl_certificate` / `ssl_certificate_key` 路径。
+- 可以用 `curl -vI https://mysite.com 2>&1 | grep -A2 "expire date"` 或在线工具快速确认线上证书的实际到期时间。
+
 ---
 
 ## 6. 关键指令速查
@@ -371,7 +438,7 @@ server {
 
 ---
 
-## 8. 调试技巧
+## 8. 调试技巧与常见故障排查
 
 ```bash
 # 1. 永远先检查配置语法再 reload
@@ -386,6 +453,24 @@ sudo tail -f /var/log/nginx/access.log
 # 4. 测试某个域名的路由
 curl -H "Host: mysite.com" http://127.0.0.1/
 ```
+
+### 常见状态码故障排查
+
+| 现象 | 常见原因 | 排查方向 |
+|------|----------|----------|
+| `404 Not Found` | `root`/`alias` 路径写错，或 `try_files` 最后一项找不到文件 | 确认 `root` 目录下确实存在对应文件；检查 `location` 匹配到的路径拼接是否正确 |
+| `403 Forbidden` | 文件/目录权限不足，或缺少 `index` 文件且没开 `autoindex` | `ls -l` 检查文件权限和运行用户（通常是 `www-data`/`nginx`）是否有读权限 |
+| `502 Bad Gateway` | 后端服务没启动、崩溃，或监听地址/端口配错 | `curl http://127.0.0.1:后端端口` 直接测试后端是否存活；检查 `proxy_pass` 地址是否正确 |
+| `504 Gateway Timeout` | 后端处理太慢，超过了 `proxy_read_timeout` | 检查后端响应耗时；适当调大 `proxy_connect_timeout`/`proxy_read_timeout`，同时排查后端本身的性能问题 |
+| 连接被拒绝/超时 | Nginx 没监听对应端口、防火墙/安全组拦截 | `sudo ss -tlnp | grep nginx` 确认监听端口；检查本机防火墙和云安全组规则 |
+| `reload` 后配置不生效 | 改错了文件（多个 `conf.d/*.conf` 互相覆盖），或语法有误导致 reload 静默失败 | `nginx -t` 先确认语法通过；`nginx -T` 打印合并后的完整生效配置，确认改动确实被加载 |
+
+### 排查思路总结
+
+1. 先看 `error.log`，绝大多数问题（配置错误、权限问题、后端不可达）都会在这里留下线索。
+2. 用 `curl -v` 分段测试：先直连后端确认后端本身没问题，再通过 Nginx 访问，缩小问题范围。
+3. `nginx -T` 可以打印所有 `include` 展开后的最终配置，适合排查"改了配置但没生效"的问题。
+4. 排查 502/504 时区分是 Nginx 侧问题还是后端侧问题：Nginx 侧看 `error.log` 里的 `upstream` 报错信息，后端侧直接看应用自己的日志。
 
 ---
 

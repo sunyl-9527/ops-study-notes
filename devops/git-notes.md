@@ -174,7 +174,7 @@ git log --oneline -- path/to/file
 # 查看某次提交的详情
 git show <commit-hash>
 git show HEAD          # 最新提交
-git show HEAD~1        # 上上次提交
+git show HEAD~1        # 上一次提交
 ```
 
 ### 5.2 暂存与提交
@@ -302,7 +302,7 @@ git remote set-url origin https://github.com/user/new-repo.git
 # 删除远程仓库关联
 git remote remove origin
 
-# 拉取远程变更（fetch + merge）
+# 拉取远程变更（默认 fetch + merge，若配置了 pull.rebase 则改为 fetch + rebase）
 git pull
 
 # 只拉取不合并
@@ -325,8 +325,10 @@ git push origin --tags
 
 ```
 git fetch  →  只把远程变更下载到本地，不动你的工作区
-git pull   →  fetch + 自动 merge（等于 git fetch && git merge）
+git pull   →  默认等于 git fetch && git merge
 ```
+
+`git pull` 的合并行为可以通过 `pull.rebase` 配置改成 rebase（`git pull --rebase` 或 `git config pull.rebase true`），此时等价于 `git fetch && git rebase`。团队协作前建议先确认仓库或个人的 `pull.rebase` 配置，避免合并策略和预期不一致。
 
 推荐先 `fetch` 看看有什么变更，再决定要不要 `merge`。
 
@@ -511,17 +513,17 @@ git rm --cached -r node_modules/
 ### 提交了敏感信息（密码/密钥）怎么办
 
 ```bash
-# 1. 立即修改/吊销泄露的密钥
-# 2. 从历史中删除文件（会改写所有相关提交）
-git filter-branch --force --index-filter \
-  "git rm --cached --ignore-unmatch secret.key" \
-  --prune-empty --tag-name-filter cat -- --all
+# 1. 立即修改/吊销泄露的密钥，历史清理不能替代吊销
+# 2. 用 git-filter-repo 从历史中删除文件（比 filter-branch 更快也更安全，官方已不推荐 filter-branch）
+pip install git-filter-repo   # 或用系统包管理器安装
+git filter-repo --path secret.key --invert-paths
 
-# 3. 强制推送
+# 3. 强制推送改写后的历史
 git push --force --all
+git push --force --tags
 ```
 
-更好的工具是 `git-filter-repo`（比 filter-branch 快且安全）。
+`git filter-repo` 默认会移除 `origin` 远程配置作为安全保护，执行后需要重新 `git remote add origin ...`。历史改写会影响所有协作者，操作前需通知团队重新克隆或执行 `git pull --rebase`，避免旧历史被重新推回。
 
 ### 找回误删的提交
 
@@ -758,7 +760,7 @@ gh repo list --visibility public
 **删除仓库**
 
 ```bash
-gh repo delete my-repo --confirm
+gh repo delete my-repo --yes
 ```
 
 **Fork 仓库**

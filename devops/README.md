@@ -13,7 +13,8 @@
 7. [监控与告警实战笔记](./monitoring-notes.md)：动手搭建 Prometheus、Grafana、Alertmanager 与日志实验环境。
 8. [Kubernetes 入门学习笔记](./k8s-notes.md)：进入容器编排，学习核心对象、应用发布、配置存储与排障。
 9. [Ansible + VMware 实验](./ansible-vmware-lab.md)：搭建自动化配置管理实验环境。
-10. [Arch Linux 虚拟机优化](./archlinux-vm-optimization.md)：为 Ansible 实验节点或本地实验环境调优虚拟机。
+10. [Ansible 核心知识笔记](./ansible-notes.md)：在实验环境上系统学习模块、playbook、变量模板与 roles。
+11. [Arch Linux 虚拟机优化](./archlinux-vm-optimization.md)：为 Ansible 实验节点或本地实验环境调优虚拟机。
 
 ## 文档定位
 
@@ -28,6 +29,7 @@
 | [monitoring-notes.md](./monitoring-notes.md) | 实践指标采集、PromQL、Grafana 看板、告警通知与日志排障 |
 | [k8s-notes.md](./k8s-notes.md) | 学习 Kubernetes 核心对象、发布更新、配置存储与 Pod 排障 |
 | [ansible-vmware-lab.md](./ansible-vmware-lab.md) | 在隔离网络中完成多节点 Ansible 实验 |
+| [ansible-notes.md](./ansible-notes.md) | 查询 Ansible 模块、playbook 语法、roles 与调试排错 |
 | [archlinux-vm-optimization.md](./archlinux-vm-optimization.md) | 优化 VMware 中 Arch Linux 实验节点的性能与资源占用 |
 
 Kubernetes 入门笔记现已建立；Terraform 等基础设施即代码相关笔记仍属于规划中内容，见 [cloud-ops-roadmap.md](./cloud-ops-roadmap.md) 中的第七、八阶段说明。

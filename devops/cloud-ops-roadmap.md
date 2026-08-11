@@ -53,7 +53,7 @@
 | Docker 与容器化 | [docker-notes.md](./docker-notes.md) |
 | 核心中间件运维 | [cloud-ops-middleware-notes.md](./cloud-ops-middleware-notes.md) |
 | 监控、日志与排障 | [monitoring-notes.md](./monitoring-notes.md) |
-| 自动化实验（Ansible） | [ansible-vmware-lab.md](./ansible-vmware-lab.md) |
+| 自动化实验（Ansible） | [ansible-vmware-lab.md](./ansible-vmware-lab.md)、[ansible-notes.md](./ansible-notes.md) |
 | 实验环境优化 | [archlinux-vm-optimization.md](./archlinux-vm-optimization.md) |
 | Kubernetes 与云原生 | [k8s-notes.md](./k8s-notes.md) |
 | CI/CD 持续交付 | [cicd-notes.md](./cicd-notes.md) |
@@ -268,7 +268,7 @@ Docker 在运维中的核心价值是：
 
 ## 九、第六阶段：自动化运维
 
-> 本阶段配套笔记：[ansible-vmware-lab.md](./ansible-vmware-lab.md)（配置管理自动化）与 [cicd-notes.md](./cicd-notes.md)（持续集成与自动部署流水线）。
+> 本阶段配套笔记：[ansible-vmware-lab.md](./ansible-vmware-lab.md)（搭建实验环境）、[ansible-notes.md](./ansible-notes.md)（模块、playbook、roles 系统学习）与 [cicd-notes.md](./cicd-notes.md)（持续集成与自动部署流水线）。
 
 ### 学习重点
 
@@ -479,6 +479,7 @@ devops/
   k8s-notes.md
   cicd-notes.md
   ansible-vmware-lab.md
+  ansible-notes.md
   archlinux-vm-optimization.md
   projects/
     web-basic/

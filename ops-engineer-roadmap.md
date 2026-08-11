@@ -34,7 +34,7 @@
 | 2 | 网络基础与排障 | [network-basics-notes.md](./linux/network-basics-notes.md)、[curl-command-guide.md](./linux/curl-command-guide.md)、[cloud-server-ops-commands.md](./linux/cloud-server-ops-commands.md) | 2-3 周 |
 | 3 | Git 与工程协作 | [git-notes.md](./devops/git-notes.md) | 1-2 周 |
 | 4 | 服务部署：Nginx / Docker / 中间件 | [nginx-notes.md](./devops/nginx-notes.md)、[docker-notes.md](./devops/docker-notes.md)、[cloud-ops-middleware-notes.md](./devops/cloud-ops-middleware-notes.md) | 4-6 周 |
-| 5 | 脚本与自动化 | [shell-scripting-notes.md](./linux/shell-scripting-notes.md)、[ansible-vmware-lab.md](./devops/ansible-vmware-lab.md) | 3-4 周 |
+| 5 | 脚本与自动化 | [shell-scripting-notes.md](./linux/shell-scripting-notes.md)、[ansible-vmware-lab.md](./devops/ansible-vmware-lab.md)、[ansible-notes.md](./devops/ansible-notes.md) | 3-4 周 |
 | 6 | 监控与告警 | [monitoring-notes.md](./devops/monitoring-notes.md) | 2-3 周 |
 | 7 | 容器编排与持续交付 | [k8s-notes.md](./devops/k8s-notes.md)、[cicd-notes.md](./devops/cicd-notes.md) | 4-6 周 |
 | 8 | 运维开发：Python 工具化 | [python-ops-notes.md](./python/python-ops-notes.md)、[学习路线.md](./python/学习路线.md) | 持续进行 |
@@ -131,7 +131,8 @@
 **目标**：把阶段 4 里手工做过两遍以上的事情全部自动化。这是从"操作员"到"工程师"的分水岭。
 
 - Shell 脚本：健壮性（`set -euo pipefail`）、函数、参数解析、实战脚本 → [shell-scripting-notes.md](./linux/shell-scripting-notes.md)
-- Ansible：inventory、ad-hoc、playbook、幂等性 → [ansible-vmware-lab.md](./devops/ansible-vmware-lab.md)
+- Ansible 实验环境：inventory、SSH 认证、第一个 playbook → [ansible-vmware-lab.md](./devops/ansible-vmware-lab.md)
+- Ansible 核心知识：模块、playbook 语法、变量模板、roles、调试 → [ansible-notes.md](./devops/ansible-notes.md)
 - 实验环境调优 → [archlinux-vm-optimization.md](./devops/archlinux-vm-optimization.md)
 
 **过关标准**：

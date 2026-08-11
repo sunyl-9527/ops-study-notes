@@ -2,6 +2,8 @@
 
 本文搭建一套隔离的 Ansible 学习环境：1 台控制节点管理 4 台被控节点。重点是理解 inventory、SSH 认证、ad-hoc 命令、playbook 和故障排查。
 
+> 本文管"搭环境"；环境就绪后，Ansible 本身的系统学习见 [ansible-notes.md](./ansible-notes.md)。
+
 ## 1. 实验拓扑
 
 ```text
@@ -310,7 +312,7 @@ ssh -t ansible@192.168.88.21 'sudo -v && sudo id'
 - [ ] inventory 和 Git 中没有明文密码或私钥。
 - [ ] 已记录快照、重建步骤和故障排查结果。
 
-完成基础实验后，可继续练习 package、service、template、copy、user、firewalld/ufw 等模块，以及 role、handler、tag 和幂等性验证。
+完成基础实验后，可继续练习 package、service、template、copy、user、firewalld/ufw 等模块，以及 role、handler、tag 和幂等性验证。Ansible 本身的系统学习（模块速查、playbook 语法、变量与模板、roles、错误处理、调试排错）见 [ansible-notes.md](./ansible-notes.md)。
 
 ---
 
